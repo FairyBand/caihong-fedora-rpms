@@ -1,5 +1,7 @@
 # Caihong Fedora RPM 仓库
 
+GitHub 仓库：<https://github.com/FairyBand/caihong-fedora-rpms>
+
 这里维护 OnePlus Pad Pro (`caihong`) 的 Fedora Workstation 44 ARM64 设备适配
 RPM。仓库与 rootfs 工程分离，Copr 使用 aarch64 builder 构建；当前版本固定从
 `caihong-linux-rootfs` 的 commit `4a343b670fcc5892be01857bc79cdb656a79787e` 取设备数据，外部源码在各 spec 中固定
@@ -64,6 +66,21 @@ modules/<kernel-release>/
 官方 `libcamera` 和 `plasma-camera` 源版本由 DNF5 override 排除，避免忘记重建时
 回退到 Fedora 包。
 
+直接上传本地 SRPM 即可触发 Copr 构建。Fedora 构建环境需要 `rpm-build` 和
+`rpmdevtools`，先为一个 spec 生成 SRPM：
+
+```sh
+make srpm SPEC=SPECS/libcamera-caihong.spec
+copr build --nowait <用户名>/fedora-44 .rpmbuild/SRPMS/*.src.rpm
+```
+
+然后按依赖顺序上传 `plasma-camera`，其余设备包可以并行上传。`caihong-kernel-payload`
+需要先把对应的 `caihong-kernel-payload-<version>.tar.zst` 放进 `SOURCES/`，再生成
+SRPM。直接上传 SRPM 的方式适合手动发布；本仓库也可作为 Copr SCM 的 Git 源。
+Copr 只跟踪本仓库的提交，不会自动监视 spec 中固定的上游 commit。上游更新时需要
+人工更新 spec 中的 commit、提交并推送，随后由 SCM webhook 触发构建。若只想临时
+构建，也可以继续使用本地 SRPM 上传。
+
 每个服务第一次启动都应记录：
 
 ```sh
@@ -75,3 +92,13 @@ journalctl -b -u caihong-ssc -u iio-sensor-proxy
 
 本仓库不把 permissive 结果当成最终迁移完成；只有 policy RPM 补齐并恢复 enforcing
 后，Fedora Workstation 44 设备适配才算完成。
+
+## 上游致谢
+
+本仓库的 RPM spec、Fedora Workstation 44 适配和设备打包由 FairyBand 维护。以下
+项目提供了被打包的上游代码、资源或工具，版权和许可证归其原作者及贡献者所有：
+
+- [Osilvfe/caihong-linux-rootfs](https://github.com/Osilvfe/caihong-linux-rootfs)
+- [Osilvfe/libcamera](https://github.com/Osilvfe/libcamera)
+- [Osilvfe/plasma-camera](https://github.com/Osilvfe/plasma-camera)
+- [linux-msm/qbootctl](https://github.com/linux-msm/qbootctl)

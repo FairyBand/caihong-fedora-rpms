@@ -6,3 +6,4 @@ RPMS/
 SOURCES/*.tar.*
 SRPMS/
 build/
+.rpmbuild/
