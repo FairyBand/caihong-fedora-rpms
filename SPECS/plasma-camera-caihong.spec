@@ -11,6 +11,7 @@ URL:            https://github.com/Osilvfe/plasma-camera
 Source0:        https://github.com/Osilvfe/plasma-camera/archive/%{commit}.tar.gz
 
 BuildRequires:  cmake
+BuildRequires:  desktop-file-utils
 BuildRequires:  extra-cmake-modules
 BuildRequires:  gettext
 BuildRequires:  kf6-kconfig-devel
