@@ -8,6 +8,7 @@ Source0:        install-current-slot
 Source1:        caihong-kernel-install.service
 Source2:        LICENSE
 BuildArch:      noarch
+BuildRequires:  systemd-rpm-macros
 Requires:       coreutils
 Requires:       findutils
 Requires:       kmod

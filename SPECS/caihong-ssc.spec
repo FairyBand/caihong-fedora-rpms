@@ -13,6 +13,7 @@ Source1:        caihong-ssc.service
 Source2:        90-caihong-ssc.rules
 Source3:        iio-sensor-proxy.conf
 
+BuildRequires:  systemd-rpm-macros
 Requires:       iio-sensor-proxy
 Requires:       systemd
 %description

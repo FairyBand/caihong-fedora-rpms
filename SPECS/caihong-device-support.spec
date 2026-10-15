@@ -11,6 +11,8 @@ Source0:        https://github.com/osilvfe/caihong-linux-rootfs/archive/%{rootfs
 Source1:        caihong-nvram-mac.c
 Source2:        90-caihong-device-support.preset
 
+BuildRequires:  desktop-file-utils
+BuildRequires:  systemd-rpm-macros
 Requires:       bash
 Requires:       bluez
 Requires:       coreutils
