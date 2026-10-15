@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2021 Javier Martinez Canillas <javier@dowhile0.org> -->
+<component type="desktop">
+  <id>qcam.desktop</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0-or-later</project_license>
+  <name>QCam</name>
+  <summary>Take photos with cameras exposed by libcamera</summary>
+  <description>
+    <p>
+      The QCam UI is a diagnostic application that allows taking photos from
+      cameras exposed by the libcamera framework.
+    </p>
+  </description>
+  <url type="homepage">https://libcamera.org/</url>
+  <url type="bugtracker">https://bugs.libcamera.org/</url>
+</component>

@@ -1,0 +1,7 @@
+# Fedora 44 uses DNF5. Keep Fedora's camera builds out of the solver while
+# leaving the Caihong Copr repository eligible to provide the package.
+[fedora*]
+excludepkgs=libcamera*,plasma-camera*
+
+[updates*]
+excludepkgs=libcamera*,plasma-camera*

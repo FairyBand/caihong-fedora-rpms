@@ -1,0 +1,12 @@
+[Unit]
+Description=Install the Caihong kernel payload into the running A/B slot
+ConditionPathExists=/usr/lib/linux-caihong/kernel-release
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/linux-caihong/install-current-slot
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

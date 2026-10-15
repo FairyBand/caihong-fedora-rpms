@@ -1,0 +1,8 @@
+enable caihong-bluetooth-autostart.service
+enable caihong-grow-rootfs.service
+enable caihong-hardware-mac.service
+enable caihong-mark-boot-successful.service
+enable caihong-pen-autoconnect.timer
+enable caihong-pen-charge.timer
+enable caihong-pen-pair.timer
+disable caihong-hotspot.service

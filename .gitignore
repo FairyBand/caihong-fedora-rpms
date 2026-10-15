@@ -1,0 +1,8 @@
+*.src.rpm
+*.rpm
+BUILD/
+BUILDROOT/
+RPMS/
+SOURCES/*.tar.*
+SRPMS/
+build/
