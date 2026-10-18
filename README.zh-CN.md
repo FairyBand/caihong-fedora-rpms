@@ -16,7 +16,7 @@ commit。
 | `ffmpeg`（`ffmpeg-free` 等子包） | Fedora f44 `ffmpeg-free` 重建：修复 Iris V4L2 M2M 编码崩溃、补齐编码器 extradata，并开启 h264/hevc V4L2 M2M 硬件解码器 | 不适用 |
 | `caihong-ssc` | FastRPC listener、SSC SensorProxy、SSC DSP 配置 | 未包含 |
 | `caihong-device-support` | Pogo/触控板 udev、DMA heap、MAC、蓝牙、热点、手写笔、手电筒和启动服务 | 未包含 |
-| `caihong-firmware` | ADSP/CDSP、GPU、WLAN/BT、触控和音频相关固件 | 不适用 |
+| `caihong-firmware` | ADSP/CDSP、GPU、Iris 视频编解码（OEM 签名 `vpu33_4v.mbn`）、WLAN/BT、触控和音频相关固件 | 不适用 |
 | `caihong-audio` | UCM2 和 AudioReach topology | 不适用 |
 | `caihong-qbootctl` | Android A/B 槽检查与标记工具 | 未包含 |
 | `caihong-kernel-updater` | 当前槽识别、boot 分区写入和读回校验命令/服务 | 未包含 |
