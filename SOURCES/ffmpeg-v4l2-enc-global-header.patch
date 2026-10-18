@@ -1,0 +1,331 @@
+From 58face8545d887229e976bd580a4623f45e7aaa3 Mon Sep 17 00:00:00 2001
+From: fairyband <zl3004431@gmail.com>
+Date: Sun, 18 Oct 2026 15:09:38 +0800
+Subject: [PATCH 2/2] avcodec/v4l2_m2m_enc: support global headers and merge
+ header buffers
+
+V4L2 stateful encoders only emit the H.264/HEVC parameter sets together
+with encoded data, so the encoder never set extradata.  Muxers that need
+a global header, such as Matroska, then failed to write their header.
+
+When AV_CODEC_FLAG_GLOBAL_HEADER is set, encode one black frame in a
+throwaway session, keep its parameter sets as extradata and reopen the
+device for the real session.
+
+With V4L2_MPEG_VIDEO_HEADER_MODE_SEPARATE the driver also returns the
+stream header in a buffer of its own.  Hold such a header-only buffer
+back and prepend it to the next packet instead of emitting a packet
+without a picture that consumes a timestamp.
+---
+ libavcodec/v4l2_m2m_enc.c | 272 +++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 270 insertions(+), 2 deletions(-)
+
+diff --git a/libavcodec/v4l2_m2m_enc.c b/libavcodec/v4l2_m2m_enc.c
+index 93703cc..681e88e 100644
+--- a/libavcodec/v4l2_m2m_enc.c
++++ b/libavcodec/v4l2_m2m_enc.c
+@@ -26,6 +26,9 @@
+ #include <search.h>
+ #include "encode.h"
+ #include "libavcodec/avcodec.h"
++#include "libavutil/imgutils.h"
++#include "libavutil/intreadwrite.h"
++#include "libavutil/mem.h"
+ #include "libavutil/pixdesc.h"
+ #include "libavutil/pixfmt.h"
+ #include "libavutil/opt.h"
+@@ -284,6 +287,116 @@ static int v4l2_send_frame(AVCodecContext *avctx, const AVFrame *frame)
+     return ff_v4l2_context_enqueue_frame(output, frame);
+ }
+ 
++/*
++ * Find the next Annex B NAL unit in [p, end).  Returns the NAL unit payload
++ * start and stores its end in *nal_end, or returns NULL if there is none.
++ */
++static const uint8_t *v4l2_next_nal(const uint8_t *p, const uint8_t *end,
++                                    const uint8_t **nal_end)
++{
++    const uint8_t *nal, *next;
++
++    for (; p + 3 <= end; p++)
++        if (!p[0] && !p[1] && p[2] == 1)
++            break;
++    if (p + 3 > end)
++        return NULL;
++
++    nal = p + 3;
++    for (next = nal; next + 3 <= end; next++)
++        if (!next[0] && !next[1] && next[2] == 1)
++            break;
++    if (next + 3 > end)
++        next = end;
++    else if (next > nal && !next[-1])
++        next--; /* 4 byte start code of the following NAL unit */
++
++    *nal_end = next;
++    return nal;
++}
++
++static int v4l2_is_parameter_set(enum AVCodecID codec_id, const uint8_t *nal)
++{
++    int type;
++
++    switch (codec_id) {
++    case AV_CODEC_ID_H264:
++        type = nal[0] & 0x1f;
++        return type == 7 || type == 8; /* SPS, PPS */
++    case AV_CODEC_ID_HEVC:
++        type = (nal[0] >> 1) & 0x3f;
++        return type >= 32 && type <= 34; /* VPS, SPS, PPS */
++    default:
++        return 0;
++    }
++}
++
++static int v4l2_is_header_only(AVCodecContext *avctx, const AVPacket *pkt)
++{
++    const uint8_t *end = pkt->data + pkt->size;
++    const uint8_t *p = pkt->data, *nal;
++    int found = 0;
++
++    if (avctx->codec_id != AV_CODEC_ID_H264 && avctx->codec_id != AV_CODEC_ID_HEVC)
++        return 0;
++
++    while ((nal = v4l2_next_nal(p, end, &p))) {
++        if (nal == p)
++            continue;
++        if (!v4l2_is_parameter_set(avctx->codec_id, nal))
++            return 0;
++        found = 1;
++    }
++
++    return found;
++}
++
++/*
++ * With V4L2_MPEG_VIDEO_HEADER_MODE_SEPARATE the driver returns the stream
++ * header in a buffer of its own.  Such a buffer carries no picture, so hold
++ * it back and prepend it to the following packet instead of emitting a
++ * packet that would consume a timestamp.
++ */
++static int v4l2_merge_header(AVCodecContext *avctx, V4L2m2mContext *s, AVPacket *avpkt)
++{
++    AVPacket *header = &s->buf_pkt;
++    int ret;
++
++    if (v4l2_is_header_only(avctx, avpkt)) {
++        if (header->size) {
++            /* consecutive header buffers: keep the latest one */
++            av_packet_unref(header);
++        }
++        ret = av_packet_make_refcounted(avpkt);
++        if (ret < 0)
++            return ret;
++        av_packet_move_ref(header, avpkt);
++        return AVERROR(EAGAIN);
++    }
++
++    if (header->size) {
++        AVPacket *merged = av_packet_alloc();
++
++        if (!merged)
++            return AVERROR(ENOMEM);
++        ret = av_new_packet(merged, header->size + avpkt->size);
++        if (ret >= 0)
++            ret = av_packet_copy_props(merged, avpkt);
++        if (ret < 0) {
++            av_packet_free(&merged);
++            return ret;
++        }
++        memcpy(merged->data, header->data, header->size);
++        memcpy(merged->data + header->size, avpkt->data, avpkt->size);
++        av_packet_unref(header);
++        av_packet_unref(avpkt);
++        av_packet_move_ref(avpkt, merged);
++        av_packet_free(&merged);
++    }
++
++    return 0;
++}
++
+ static int v4l2_receive_packet(AVCodecContext *avctx, AVPacket *avpkt)
+ {
+     V4L2m2mContext *s = ((V4L2m2mPriv*)avctx->priv_data)->context;
+@@ -328,10 +441,140 @@ static int v4l2_receive_packet(AVCodecContext *avctx, AVPacket *avpkt)
+     }
+ 
+ dequeue:
+-    return ff_v4l2_context_dequeue_packet(capture, avpkt);
++    do {
++        ret = ff_v4l2_context_dequeue_packet(capture, avpkt);
++        if (ret < 0)
++            return ret;
++        ret = v4l2_merge_header(avctx, s, avpkt);
++        /* no more input will arrive while draining, so keep dequeuing */
++    } while (ret == AVERROR(EAGAIN) && s->draining);
++
++    return ret;
+ }
+ 
+-static av_cold int v4l2_encode_init(AVCodecContext *avctx)
++/*
++ * Append the Annex B parameter set NAL units found in an encoded packet to
++ * the extradata buffer.  Returns 1 once a non parameter set NAL unit has been
++ * seen, which means the stream header is complete.
++ */
++static int v4l2_collect_parameter_sets(AVCodecContext *avctx, const uint8_t *data,
++                                       int size, uint8_t *extradata, int *extradata_size,
++                                       int extradata_max)
++{
++    const uint8_t *end = data + size;
++    const uint8_t *p = data, *nal;
++    int done = 0;
++
++    while ((nal = v4l2_next_nal(p, end, &p))) {
++        int nal_size = p - nal;
++
++        if (!nal_size)
++            continue;
++        if (!v4l2_is_parameter_set(avctx->codec_id, nal)) {
++            done = 1;
++            continue;
++        }
++        if (*extradata_size + 4 + nal_size > extradata_max)
++            return AVERROR(ENOSPC);
++        AV_WB32(extradata + *extradata_size, 1);
++        memcpy(extradata + *extradata_size + 4, nal, nal_size);
++        *extradata_size += 4 + nal_size;
++    }
++
++    return done;
++}
++
++/*
++ * V4L2 encoders only emit the stream header together with encoded data.
++ * When the caller needs a global header, encode one black frame in a
++ * throwaway session and keep its parameter sets as extradata.  The real
++ * session is configured identically, so it produces the same headers.
++ */
++static av_cold int v4l2_probe_extradata(AVCodecContext *avctx)
++{
++    V4L2m2mContext *s = ((V4L2m2mPriv*)avctx->priv_data)->context;
++    V4L2Context *const capture = &s->capture;
++    V4L2Context *const output = &s->output;
++    const int extradata_max = 4096;
++    uint8_t *extradata = NULL;
++    int extradata_size = 0;
++    ptrdiff_t linesize[4];
++    AVFrame *frame = NULL;
++    AVPacket *pkt = NULL;
++    int ret, i;
++
++    frame = av_frame_alloc();
++    pkt = av_packet_alloc();
++    extradata = av_mallocz(extradata_max + AV_INPUT_BUFFER_PADDING_SIZE);
++    if (!frame || !pkt || !extradata) {
++        ret = AVERROR(ENOMEM);
++        goto end;
++    }
++
++    frame->format = avctx->pix_fmt;
++    frame->width  = avctx->width;
++    frame->height = avctx->height;
++    ret = av_frame_get_buffer(frame, 0);
++    if (ret < 0)
++        goto end;
++    for (i = 0; i < 4; i++)
++        linesize[i] = frame->linesize[i];
++    ret = av_image_fill_black(frame->data, linesize, frame->format,
++                              avctx->color_range, frame->width, frame->height);
++    if (ret < 0)
++        goto end;
++    frame->pts = 0;
++
++    ret = ff_v4l2_context_enqueue_frame(output, frame);
++    if (ret < 0)
++        goto end;
++    ret = ff_v4l2_context_set_status(output, VIDIOC_STREAMON);
++    if (ret < 0)
++        goto end;
++    ret = ff_v4l2_context_set_status(capture, VIDIOC_STREAMON);
++    if (ret < 0)
++        goto end;
++    ret = ff_v4l2_context_enqueue_frame(output, NULL);
++    if (ret < 0)
++        goto end;
++
++    /* the header normally arrives in the first one or two buffers */
++    for (i = 0; i < 8; i++) {
++        ret = ff_v4l2_context_dequeue_packet(capture, pkt);
++        if (ret == AVERROR(EAGAIN))
++            continue;
++        if (ret < 0)
++            break;
++        ret = v4l2_collect_parameter_sets(avctx, pkt->data, pkt->size, extradata,
++                                          &extradata_size, extradata_max);
++        av_packet_unref(pkt);
++        if (ret)
++            break;
++    }
++    if (ret < 0 && ret != AVERROR_EOF)
++        goto end;
++
++    if (!extradata_size) {
++        av_log(avctx, AV_LOG_ERROR, "encoder did not produce a stream header\n");
++        ret = AVERROR_EXTERNAL;
++        goto end;
++    }
++
++    av_log(avctx, AV_LOG_DEBUG, "extracted %d bytes of extradata\n", extradata_size);
++    av_freep(&avctx->extradata);
++    avctx->extradata = extradata;
++    avctx->extradata_size = extradata_size;
++    extradata = NULL;
++    ret = 0;
++
++end:
++    av_packet_free(&pkt);
++    av_frame_free(&frame);
++    av_free(extradata);
++    return ret;
++}
++
++static av_cold int v4l2_encode_open(AVCodecContext *avctx)
+ {
+     V4L2Context *capture, *output;
+     V4L2m2mContext *s;
+@@ -381,6 +624,31 @@ static av_cold int v4l2_encode_init(AVCodecContext *avctx)
+     return v4l2_prepare_encoder(s);
+ }
+ 
++static av_cold int v4l2_encode_init(AVCodecContext *avctx)
++{
++    V4L2m2mPriv *priv = avctx->priv_data;
++    int ret;
++
++    ret = v4l2_encode_open(avctx);
++    if (ret < 0)
++        return ret;
++
++    if (!(avctx->flags & AV_CODEC_FLAG_GLOBAL_HEADER) ||
++        (avctx->codec_id != AV_CODEC_ID_H264 && avctx->codec_id != AV_CODEC_ID_HEVC))
++        return 0;
++
++    ret = v4l2_probe_extradata(avctx);
++    ff_v4l2_m2m_codec_end(priv);
++    if (ret == AVERROR(ENOMEM))
++        return ret;
++    if (ret < 0)
++        av_log(avctx, AV_LOG_WARNING,
++               "could not extract a global header (%s), the stream will "
++               "only carry in-band headers\n", av_err2str(ret));
++
++    return v4l2_encode_open(avctx);
++}
++
+ static av_cold int v4l2_encode_close(AVCodecContext *avctx)
+ {
+     return ff_v4l2_m2m_codec_end(avctx->priv_data);
+-- 
+2.56.0
+

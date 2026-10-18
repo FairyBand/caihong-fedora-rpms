@@ -1,0 +1,106 @@
+# Follow Fedora's rpms/ffmpeg f44 branch.  When dist-git moves, regenerate the
+# Caihong spec, check that the sources verify and all patches still apply,
+# commit the result and ask Copr to rebuild the ffmpeg package.  If anything
+# fails, nothing is pushed and an issue is opened instead.
+name: Sync ffmpeg with Fedora
+
+on:
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: "Fedora dist-git commit to sync (default: f44 branch head)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: sync-ffmpeg
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    container: registry.fedoraproject.org/fedora:44
+    steps:
+      - name: Install tools
+        run: dnf -y install git make python3 rpm-build rpmdevtools gpgverify
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Sync from Fedora dist-git
+        id: sync
+        env:
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          set -eu
+          if [ -n "${COMMIT:-}" ]; then
+            result=$(./scripts/sync-ffmpeg.py --commit "$COMMIT" | tail -n 1)
+          else
+            result=$(./scripts/sync-ffmpeg.py | tail -n 1)
+          fi
+          fedora_commit=$(sed -n 's/^# caihong-sync: fedora-dist-git [^ ]* //p' SPECS/ffmpeg-caihong.spec)
+          echo "result=$result" >> "$GITHUB_OUTPUT"
+          echo "fedora_commit=$fedora_commit" >> "$GITHUB_OUTPUT"
+          git status --short
+
+      - name: Verify sources and patches
+        if: steps.sync.outputs.result == 'changed'
+        run: ./scripts/check-srpm.sh SPECS/ffmpeg-caihong.spec
+
+      - name: Commit and push
+        if: steps.sync.outputs.result == 'changed'
+        env:
+          FEDORA_COMMIT: ${{ steps.sync.outputs.fedora_commit }}
+        run: |
+          set -eu
+          git config user.name "fairyband"
+          git config user.email "zl3004431@gmail.com"
+          git add SPECS/ffmpeg-caihong.spec SOURCES
+          git commit -m "ffmpeg: sync with Fedora dist-git $(printf '%.12s' "$FEDORA_COMMIT")"
+          git push
+
+      - name: Trigger Copr build
+        if: steps.sync.outputs.result == 'changed'
+        env:
+          COPR_WEBHOOK: ${{ secrets.COPR_FFMPEG_WEBHOOK }}
+        run: |
+          set -eu
+          if [ -z "${COPR_WEBHOOK:-}" ]; then
+            echo "COPR_FFMPEG_WEBHOOK is not set; relying on the repository push webhook"
+            exit 0
+          fi
+          curl --fail --silent --show-error --retry 3 -X POST "$COPR_WEBHOOK"
+
+      - name: Report failure
+        if: failure()
+        uses: actions/github-script@d746ffe35508b1917358783b479e04febd2b8f71 # v9.0.0
+        with:
+          script: |
+            const title = "ffmpeg: automatic sync with Fedora failed";
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: "open", per_page: 100,
+            });
+            const existing = open.find(issue => issue.title === title);
+            const body = `The sync workflow failed: ${run}\n\n` +
+              "Usually the Caihong patches no longer apply to the new Fedora ffmpeg, " +
+              "or the Fedora spec layout changed. Rebase SOURCES/ffmpeg-v4l2-*.patch " +
+              "or adjust scripts/sync-ffmpeg.py, then run the workflow manually.";
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing.number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo, title, body,
+              });
+            }

@@ -13,6 +13,7 @@ commit。
 | --- | --- | --- |
 | `libcamera` | Caihong simple pipeline、simple IPA、GPU soft ISP、qcam、GStreamer、传感器 YAML | 未包含 |
 | `plasma-camera` | Caihong Plasma Camera 前端，GNOME 会话中作为 Qt 应用运行 | 未包含 |
+| `ffmpeg`（`ffmpeg-free` 等子包） | Fedora f44 `ffmpeg-free` 重建：修复 Iris V4L2 M2M 编码崩溃、补齐编码器 extradata，并开启 h264/hevc V4L2 M2M 硬件解码器 | 不适用 |
 | `caihong-ssc` | FastRPC listener、SSC SensorProxy、SSC DSP 配置 | 未包含 |
 | `caihong-device-support` | Pogo/触控板 udev、DMA heap、MAC、蓝牙、热点、手写笔、手电筒和启动服务 | 未包含 |
 | `caihong-firmware` | ADSP/CDSP、GPU、WLAN/BT、触控和音频相关固件 | 不适用 |
@@ -42,6 +43,7 @@ rpmspec -P --target=aarch64 SPECS/caihong-qbootctl.spec >/dev/null
 rpmspec -P --target=aarch64 SPECS/plasma-camera-caihong.spec >/dev/null
 rpmspec -P --target=aarch64 SPECS/caihong-kernel-updater.spec >/dev/null
 rpmspec -P --target=aarch64 SPECS/caihong-kernel-payload.spec >/dev/null
+rpmspec -P --target=aarch64 SPECS/ffmpeg-caihong.spec >/dev/null
 ```
 
 `caihong-kernel-payload` 需要先生成 release archive，目录必须包含：
@@ -65,6 +67,35 @@ modules/<kernel-release>/
 `caihong/fedora-44`，只启用 `aarch64`。设备镜像中必须先启用 Copr，再安装这些包。
 官方 `libcamera` 和 `plasma-camera` 源版本由 DNF5 override 排除，避免忘记重建时
 回退到 Fedora 包。
+
+`ffmpeg` 同样永久压过 Fedora：`Epoch: 1`，并由 `libavcodec-free` 安装
+`/etc/dnf/repos.override.d/99-caihong-ffmpeg.repo`，把 Fedora 的 `ffmpeg-free`、
+`libav*-free`、`libsw*-free` 排除出 `fedora*`/`updates*`。DNF5 的 `excludepkgs`
+是追加列表，和 libcamera 的 override 文件可以共存。
+
+`SPECS/ffmpeg-caihong.spec` 和 `SOURCES/ffmpeg-*` 由 `scripts/sync-ffmpeg.py` 从
+Fedora dist-git `rpms/ffmpeg` 的 f44 分支生成，不要手工编辑；Caihong 自己维护的只有
+`SOURCES/ffmpeg-v4l2-*.patch`、`SOURCES/99-caihong-ffmpeg.repo` 和脚本里的配置
+（补丁列表、额外解码器、`CAIHONG_RELEASE`）。补丁改了而 Fedora 没更新时，把
+`CAIHONG_RELEASE` 加一后重新运行脚本。
+
+`.github/workflows/sync-ffmpeg.yml` 每 6 小时检查一次 dist-git：有更新时重新生成
+spec，在 Fedora 44 容器里用 `scripts/check-srpm.sh` 构建 SRPM 并执行 `%prep`
+（校验 FFmpeg 签名、应用全部补丁），通过后提交、推送，并 POST 到仓库 secret
+`COPR_FFMPEG_WEBHOOK` 触发 Copr 构建；失败时不推送，并开一个 issue。也可以在
+Actions 页面手动运行，指定某个 dist-git commit。
+
+`COPR_FFMPEG_WEBHOOK` 取自 Copr 项目里 `ffmpeg` 包的自定义 webhook
+（`https://copr.fedorainfracloud.org/webhooks/custom/<id>/<uuid>/ffmpeg/`），该包
+需配置为 SCM 源、spec 为 `SPECS/ffmpeg-caihong.spec`、SRPM 方式为 `make_srpm`。
+如果项目已经用 GitHub push webhook 自动构建，可以不设置这个 secret，避免重复构建。
+
+本地同步和检查：
+
+```sh
+scripts/sync-ffmpeg.py            # 最后一行输出 changed / unchanged
+scripts/check-srpm.sh SPECS/ffmpeg-caihong.spec
+```
 
 直接上传本地 SRPM 即可触发 Copr 构建。Fedora 构建环境需要 `rpm-build` 和
 `rpmdevtools`，先为一个 spec 生成 SRPM：
@@ -102,3 +133,4 @@ journalctl -b -u caihong-ssc -u iio-sensor-proxy
 - [Osilvfe/libcamera](https://github.com/Osilvfe/libcamera)
 - [Osilvfe/plasma-camera](https://github.com/Osilvfe/plasma-camera)
 - [linux-msm/qbootctl](https://github.com/linux-msm/qbootctl)
+- [FFmpeg](https://ffmpeg.org/) 与 Fedora [rpms/ffmpeg](https://src.fedoraproject.org/rpms/ffmpeg) 打包

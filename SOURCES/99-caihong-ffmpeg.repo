@@ -1,0 +1,9 @@
+# Fedora 44 uses DNF5. Keep Fedora's ffmpeg-free builds out of the solver so
+# the Caihong Copr build, which carries the Qualcomm Iris V4L2 M2M fixes, is
+# always the provider.  excludepkgs is an append list in DNF5, so this adds to
+# other Caihong override files instead of replacing them.
+[fedora*]
+excludepkgs=ffmpeg-free*,libavcodec-free*,libavdevice-free*,libavfilter-free*,libavformat-free*,libavutil-free*,libswresample-free*,libswscale-free*
+
+[updates*]
+excludepkgs=ffmpeg-free*,libavcodec-free*,libavdevice-free*,libavfilter-free*,libavformat-free*,libavutil-free*,libswresample-free*,libswscale-free*
