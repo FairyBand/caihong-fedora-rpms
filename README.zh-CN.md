@@ -14,6 +14,7 @@ commit。
 | `libcamera` | Caihong simple pipeline、simple IPA、GPU soft ISP、qcam、GStreamer、传感器 YAML | 未包含 |
 | `plasma-camera` | Caihong Plasma Camera 前端，GNOME 会话中作为 Qt 应用运行 | 未包含 |
 | `ffmpeg`（`ffmpeg-free` 等子包） | Fedora f44 `ffmpeg-free` 重建：修复 Iris V4L2 M2M 编码崩溃、补齐编码器 extradata，并开启 h264/hevc V4L2 M2M 硬件解码器 | 不适用 |
+| `obs-studio-plugin-v4l2m2m` | OBS 编码器插件：在高级输出模式中提供 V4L2 M2M H.264/HEVC 硬件编码（Iris），依赖 Caihong `ffmpeg` | 未包含 |
 | `caihong-ssc` | FastRPC listener、SSC SensorProxy、SSC DSP 配置 | 未包含 |
 | `caihong-device-support` | Pogo/触控板 udev、DMA heap、MAC、蓝牙、热点、手写笔、手电筒和启动服务 | 未包含 |
 | `caihong-firmware` | ADSP/CDSP、GPU、Iris 视频编解码（OEM 签名 `vpu33_4v.mbn`）、WLAN/BT、触控和音频相关固件 | 不适用 |
@@ -44,6 +45,7 @@ rpmspec -P --target=aarch64 SPECS/plasma-camera-caihong.spec >/dev/null
 rpmspec -P --target=aarch64 SPECS/caihong-kernel-updater.spec >/dev/null
 rpmspec -P --target=aarch64 SPECS/caihong-kernel-payload.spec >/dev/null
 rpmspec -P --target=aarch64 SPECS/ffmpeg-caihong.spec >/dev/null
+rpmspec -P --target=aarch64 SPECS/obs-studio-plugin-v4l2m2m.spec >/dev/null
 ```
 
 `caihong-kernel-payload` 需要先生成 release archive，目录必须包含：

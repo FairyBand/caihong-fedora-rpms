@@ -1,0 +1,16 @@
+cmake_minimum_required(VERSION 3.22)
+project(obs-v4l2m2m VERSION 0.1.0 LANGUAGES C)
+
+find_package(libobs REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavcodec libavutil)
+
+include(GNUInstallDirs)
+
+add_library(obs-v4l2m2m MODULE obs-v4l2m2m.c)
+set_target_properties(obs-v4l2m2m PROPERTIES PREFIX "" C_STANDARD 11)
+target_compile_options(obs-v4l2m2m PRIVATE -Wall -Wextra -Wno-unused-parameter)
+target_link_libraries(obs-v4l2m2m PRIVATE OBS::libobs PkgConfig::FFMPEG)
+
+install(TARGETS obs-v4l2m2m LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/obs-plugins)
+install(DIRECTORY data/ DESTINATION ${CMAKE_INSTALL_DATADIR}/obs/obs-plugins/obs-v4l2m2m)
