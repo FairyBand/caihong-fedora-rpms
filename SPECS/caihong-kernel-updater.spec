@@ -1,9 +1,9 @@
 Name:           caihong-kernel-updater
 Version:        0.1.0
-Release:        100.caihong%{?dist}
+Release:        101.caihong%{?dist}
 Summary:        Safe A/B slot updater for the Caihong kernel payload
 License:        GPL-2.0-only
-URL:            https://github.com/osilvfe/caihong-linux-rootfs
+URL:            https://github.com/FairyBand/caihong-linux-rootfs
 Source0:        install-current-slot
 Source1:        caihong-kernel-install.service
 Source2:        LICENSE
@@ -61,5 +61,8 @@ sh -n %{buildroot}%{_sbindir}/caihong-kernel-install
 %{_sbindir}/caihong-kernel-install
 
 %changelog
+* Sun Oct 18 2026 fairyband <zl3004431@gmail.com> - 0.1.0-101.caihong
+- Point the URL at the FairyBand fork.
+
 * Fri Oct 16 2026 Caihong Maintainers <caihong@example.invalid> - 0.1.0-100.caihong
 - Package explicit A/B kernel installation without SELinux policy.

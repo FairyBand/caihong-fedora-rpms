@@ -1,14 +1,14 @@
-%global rootfs_commit 4a343b670fcc5892be01857bc79cdb656a79787e
+%global rootfs_commit de106319349c0a8575f5b4047c942fb025c29197
 %global rootfs_name caihong-linux-rootfs-%{rootfs_commit}
 %global debug_package %{nil}
 
 Name:           caihong-ssc
 Version:        0.1.0
-Release:        100.caihong%{?dist}
+Release:        101.caihong%{?dist}
 Summary:        Caihong Qualcomm Sensor Subsystem userspace
 License:        GPL-2.0-only
-URL:            https://github.com/osilvfe/caihong-linux-rootfs
-Source0:        https://github.com/osilvfe/caihong-linux-rootfs/archive/%{rootfs_commit}.tar.gz
+URL:            https://github.com/FairyBand/caihong-linux-rootfs
+Source0:        https://github.com/FairyBand/caihong-linux-rootfs/archive/%{rootfs_commit}.tar.gz
 Source1:        caihong-ssc.service
 Source2:        90-caihong-ssc.rules
 Source3:        iio-sensor-proxy.conf
@@ -60,9 +60,6 @@ test -x %{buildroot}%{_libexecdir}/caihong-ssc/hexagonrpcd
 test -x %{buildroot}%{_libexecdir}/caihong-ssc/iio-sensor-proxy
 test -s %{buildroot}%{_libdir}/caihong-ssc/libssc.so.2
 
-%pre
-%systemd_pre caihong-ssc.service
-
 %post
 %systemd_post caihong-ssc.service
 udevadm control --reload-rules >/dev/null 2>&1 || :
@@ -87,5 +84,9 @@ udevadm control --reload-rules >/dev/null 2>&1 || :
 %{_sharedstatedir}/caihong-ssc/root/
 
 %changelog
+* Sun Oct 18 2026 fairyband <zl3004431@gmail.com> - 0.1.0-101.caihong
+- Build from the FairyBand fork, fedora branch.
+- Drop the %pre scriptlet: %systemd_pre does not exist and broke installation.
+
 * Fri Oct 16 2026 Caihong Maintainers <caihong@example.invalid> - 0.1.0-100.caihong
 - Package the validated Caihong SSC runtime without SELinux policy.

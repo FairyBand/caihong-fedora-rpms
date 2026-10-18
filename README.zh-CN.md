@@ -3,9 +3,13 @@
 GitHub 仓库：<https://github.com/FairyBand/caihong-fedora-rpms>
 
 这里维护 OnePlus Pad Pro (`caihong`) 的 Fedora Workstation 44 ARM64 设备适配
-RPM。仓库与 rootfs 工程分离，Copr 使用 aarch64 builder 构建；当前版本固定从
-`caihong-linux-rootfs` 的 commit `4a343b670fcc5892be01857bc79cdb656a79787e` 取设备数据，外部源码在各 spec 中固定
-commit。
+RPM。仓库与 rootfs 工程分离，Copr 使用 aarch64 builder 构建。设备数据（`rootfs/caihong/`、
+`firmware/`、`firmware-assets/`）取自
+[FairyBand/caihong-linux-rootfs](https://github.com/FairyBand/caihong-linux-rootfs) 的
+`fedora` 分支，`caihong-audio`、`caihong-device-support`、`caihong-firmware` 和
+`caihong-ssc` 的 `%global rootfs_commit` 固定为同一个 commit；外部源码在各 spec 中固定
+commit。rootfs 仓库的设备数据更新后，需要把这四个 spec 的 `rootfs_commit` 改为新的
+`fedora` commit，并提高 `Release`。
 
 当前包边界如下：
 
@@ -69,6 +73,12 @@ modules/<kernel-release>/
 `caihong/fedora-44`，只启用 `aarch64`。设备镜像中必须先启用 Copr，再安装这些包。
 官方 `libcamera` 和 `plasma-camera` 源版本由 DNF5 override 排除，避免忘记重建时
 回退到 Fedora 包。
+
+`caihong-device-support` 安装 `/etc/dnf/repos.override.d/90-caihong-copr.repo`，把
+Copr 仓库优先级设为 10（Fedora 默认 99）。DNF 因此对 Copr 中存在的每个包名都只从 Copr
+选取候选，即使 Fedora 的 EVR 更高也不会被替换；只在 Fedora 中存在的包不受影响。已经
+从 Fedora 安装的同名包需要 `dnf distro-sync` 才会切换到 Copr 构建。下面的 Epoch 和
+`excludepkgs` 是额外的保护。
 
 `ffmpeg` 同样永久压过 Fedora：`Epoch: 1`，并由 `libavcodec-free` 安装
 `/etc/dnf/repos.override.d/99-caihong-ffmpeg.repo`，把 Fedora 的 `ffmpeg-free`、

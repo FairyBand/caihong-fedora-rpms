@@ -1,16 +1,13 @@
-%global rootfs_commit 4a343b670fcc5892be01857bc79cdb656a79787e
+%global rootfs_commit de106319349c0a8575f5b4047c942fb025c29197
 %global rootfs_name caihong-linux-rootfs-%{rootfs_commit}
 
 Name:           caihong-firmware
 Version:        0.1.0
-Release:        101.caihong%{?dist}
+Release:        102.caihong%{?dist}
 Summary:        OnePlus Pad Pro Caihong firmware payloads
 License:        Redistributable, no modification permitted
-URL:            https://github.com/osilvfe/caihong-linux-rootfs
-Source0:        https://github.com/osilvfe/caihong-linux-rootfs/archive/%{rootfs_commit}.tar.gz
-# OEM-signed (OPLUS certificate chain) Iris video firmware taken from the
-# stock vendor_a /firmware partition; the device needs this signed image.
-Source1:        vpu33_4v.mbn
+URL:            https://github.com/FairyBand/caihong-linux-rootfs
+Source0:        https://github.com/FairyBand/caihong-linux-rootfs/archive/%{rootfs_commit}.tar.gz
 BuildArch:      noarch
 
 %description
@@ -32,8 +29,6 @@ rm -f %{buildroot}%{_prefix}/lib/firmware/updates/SHA256SUMS \
     %{buildroot}%{_prefix}/lib/firmware/updates/SOURCE.md
 rm -f %{buildroot}%{_prefix}/lib/firmware/updates/regulatory.db \
     %{buildroot}%{_prefix}/lib/firmware/updates/regulatory.db.p7s
-install -pm 0644 %{SOURCE1} \
-    %{buildroot}%{_prefix}/lib/firmware/updates/qcom/sm8650/Oneplus/caihong/vpu33_4v.mbn
 
 %check
 test -s %{buildroot}%{_prefix}/lib/firmware/updates/qcom/sm8650/Oneplus/caihong/adsp.mbn
@@ -49,6 +44,9 @@ test -s %{buildroot}%{_prefix}/lib/firmware/updates/ath12k/WCN7850/hw2.0/caihong
 %{_prefix}/lib/firmware/updates/qcom/
 
 %changelog
+* Sun Oct 18 2026 fairyband <zl3004431@gmail.com> - 0.1.0-102.caihong
+- Build from the FairyBand fork, fedora branch, which now carries vpu33_4v.mbn.
+
 * Sun Oct 18 2026 fairyband <zl3004431@gmail.com> - 0.1.0-101.caihong
 - Add the OEM-signed Iris video firmware vpu33_4v.mbn.
 

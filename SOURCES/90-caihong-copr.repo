@@ -1,0 +1,6 @@
+# Prefer the Caihong Copr over Fedora for every package name it provides.
+# Fedora repositories use the default priority 99; a lower value wins, so a
+# package in this Copr is taken from it even when Fedora ships a newer EVR.
+# Packages that only Fedora provides are unaffected.
+[copr:copr.fedorainfracloud.org:fairyband:caihong]
+priority=10

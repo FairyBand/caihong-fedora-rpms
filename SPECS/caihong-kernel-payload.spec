@@ -2,10 +2,10 @@
 
 Name:           caihong-kernel-payload
 Version:        0.1.0
-Release:        100.caihong%{?dist}
+Release:        101.caihong%{?dist}
 Summary:        Caihong kernel, DTB, boot images and modules payload
 License:        GPL-2.0-only and Redistributable firmware
-URL:            https://github.com/osilvfe/caihong-linux-rootfs
+URL:            https://github.com/FairyBand/caihong-linux-rootfs
 Source0:        %{payload_name}.tar.zst
 Requires:       caihong-kernel-updater = %{version}-%{release}
 
@@ -46,5 +46,8 @@ test -s %{buildroot}%{_prefix}/lib/linux-caihong/kernel-release
 %{_prefix}/lib/linux-caihong/modules/
 
 %changelog
+* Sun Oct 18 2026 fairyband <zl3004431@gmail.com> - 0.1.0-101.caihong
+- Point the URL at the FairyBand fork.
+
 * Fri Oct 16 2026 Caihong Maintainers <caihong@example.invalid> - 0.1.0-100.caihong
 - Define the release-specific kernel payload consumed by the updater.
