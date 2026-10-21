@@ -1,14 +1,14 @@
-%global commit 66fe661132c79267bb6d1fcf3b0a49eb1439c7ce
+%global commit 38ca4ecae71f3a35e14345b18359a19df27a6b80
 
 Name:           libcamera
 Epoch:          1
 Version:        0.7.2
-Release:        100.caihong%{?dist}
+Release:        101.caihong%{?dist}
 Summary:        Camera support library with OnePlus Pad Pro Caihong support
 
 License:        LGPL-2.1-or-later
-URL:             https://github.com/Osilvfe/libcamera/tree/caihong-camera
-Source0:        https://github.com/Osilvfe/libcamera/archive/%{commit}/libcamera-%{commit}.tar.gz
+URL:             https://github.com/FairyBand/libcamera/tree/caihong-camera
+Source0:        https://github.com/FairyBand/libcamera/archive/%{commit}/libcamera-%{commit}.tar.gz
 Source1:        70-libcamera.rules
 Source2:        qcam.desktop
 Source3:        qcam.metainfo.xml
@@ -194,5 +194,10 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/qcam.desktop
 %{_bindir}/libcamera-bug-report
 
 %changelog
+* Wed Oct 21 2026 Caihong Maintainers <caihong@example.invalid> - 1:0.7.2-101.caihong
+- Recover ControlInfoMap handles by ControlIdMap in the control serializer,
+  fixing the software ISP proxy worker abort that left PipeWire camera nodes
+  unconfigured.
+- Build from https://github.com/FairyBand/libcamera/tree/caihong-camera.
 * Thu Oct 15 2026 Caihong Maintainers <caihong@example.invalid> - 1:0.7.2-100.caihong
 - Build libcamera with OnePlus Pad Pro Caihong camera support.
