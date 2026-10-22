@@ -16,7 +16,6 @@ commit。rootfs 仓库的设备数据更新后，需要把这四个 spec 的 `ro
 | 包 | 内容 | SELinux policy |
 | --- | --- | --- |
 | `libcamera` | Caihong simple pipeline、simple IPA、GPU soft ISP、qcam、GStreamer、传感器 YAML | 未包含 |
-| `plasma-camera` | Caihong Plasma Camera 前端，GNOME 会话中作为 Qt 应用运行 | 未包含 |
 | `ffmpeg`（`ffmpeg-free` 等子包） | Fedora f44 `ffmpeg-free` 重建：修复 Iris V4L2 M2M 编码崩溃、补齐编码器 extradata，并开启 h264/hevc V4L2 M2M 硬件解码器 | 不适用 |
 | `obs-studio-plugin-v4l2m2m` | OBS 编码器插件：在高级输出模式中提供 V4L2 M2M H.264/HEVC 硬件编码（Iris），依赖 Caihong `ffmpeg` | 未包含 |
 | `caihong-ssc` | FastRPC listener、SSC SensorProxy、SSC DSP 配置 | 未包含 |
@@ -45,7 +44,6 @@ rpmspec -P --target=aarch64 SPECS/caihong-ssc.spec >/dev/null
 rpmspec -P --target=aarch64 SPECS/caihong-audio.spec >/dev/null
 rpmspec -P --target=aarch64 SPECS/caihong-firmware.spec >/dev/null
 rpmspec -P --target=aarch64 SPECS/caihong-qbootctl.spec >/dev/null
-rpmspec -P --target=aarch64 SPECS/plasma-camera-caihong.spec >/dev/null
 rpmspec -P --target=aarch64 SPECS/caihong-kernel-updater.spec >/dev/null
 rpmspec -P --target=aarch64 SPECS/caihong-kernel-payload.spec >/dev/null
 rpmspec -P --target=aarch64 SPECS/ffmpeg-caihong.spec >/dev/null
@@ -69,10 +67,11 @@ modules/<kernel-release>/
 
 ## Copr 顺序
 
-先构建并发布 `libcamera`，再构建 `plasma-camera`；其余包可以并行。目标项目建议为
+`libcamera` 和其余包可以并行构建。目标项目建议为
 `caihong/fedora-44`，只启用 `aarch64`。设备镜像中必须先启用 Copr，再安装这些包。
-官方 `libcamera` 和 `plasma-camera` 源版本由 DNF5 override 排除，避免忘记重建时
-回退到 Fedora 包。
+官方 `libcamera` 源版本由 DNF5 override 排除，避免忘记重建时回退到 Fedora 包。
+本仓库不再打包 Plasma Camera；override 同样排除 Fedora 的 `plasma-camera`，镜像中不会
+再装上它。
 
 `caihong-device-support` 安装 `/etc/dnf/repos.override.d/90-caihong-copr.repo`，把
 Copr 仓库优先级设为 10（Fedora 默认 99）。DNF 因此对 Copr 中存在的每个包名都只从 Copr
@@ -117,7 +116,7 @@ make srpm SPEC=SPECS/libcamera-caihong.spec
 copr build --nowait <用户名>/fedora-44 .rpmbuild/SRPMS/*.src.rpm
 ```
 
-然后按依赖顺序上传 `plasma-camera`，其余设备包可以并行上传。`caihong-kernel-payload`
+其余设备包可以并行上传。`caihong-kernel-payload`
 需要先把对应的 `caihong-kernel-payload-<version>.tar.zst` 放进 `SOURCES/`，再生成
 SRPM。直接上传 SRPM 的方式适合手动发布；本仓库也可作为 Copr SCM 的 Git 源。
 Copr 只跟踪本仓库的提交，不会自动监视 spec 中固定的上游 commit。上游更新时需要
@@ -143,6 +142,5 @@ journalctl -b -u caihong-ssc -u iio-sensor-proxy
 
 - [Osilvfe/caihong-linux-rootfs](https://github.com/Osilvfe/caihong-linux-rootfs)
 - [Osilvfe/libcamera](https://github.com/Osilvfe/libcamera)
-- [Osilvfe/plasma-camera](https://github.com/Osilvfe/plasma-camera)
 - [linux-msm/qbootctl](https://github.com/linux-msm/qbootctl)
 - [FFmpeg](https://ffmpeg.org/) 与 Fedora [rpms/ffmpeg](https://src.fedoraproject.org/rpms/ffmpeg) 打包
