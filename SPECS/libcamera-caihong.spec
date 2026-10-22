@@ -1,9 +1,9 @@
-%global commit 38ca4ecae71f3a35e14345b18359a19df27a6b80
+%global commit 6ec90877cc298a082dca8fcabc7d1e420133ac03
 
 Name:           libcamera
 Epoch:          1
 Version:        0.7.2
-Release:        101.caihong%{?dist}
+Release:        102.caihong%{?dist}
 Summary:        Camera support library with OnePlus Pad Pro Caihong support
 
 License:        LGPL-2.1-or-later
@@ -194,6 +194,12 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/qcam.desktop
 %{_bindir}/libcamera-bug-report
 
 %changelog
+* Thu Oct 22 2026 Caihong Maintainers <caihong@example.invalid> - 1:0.7.2-102.caihong
+- Serialize ControlLists without a ControlIdMap as libcamera controls, fixing
+  the soft ISP worker abort on Camera::start() from PipeWire, and drop the
+  ControlIdMap lookup fallback of 101, which crashed the PipeWire daemon.
+- Grant the active seat user access to /dev/dma_heap/system so the software
+  ISP works in the desktop session without the video group.
 * Wed Oct 21 2026 Caihong Maintainers <caihong@example.invalid> - 1:0.7.2-101.caihong
 - Recover ControlInfoMap handles by ControlIdMap in the control serializer,
   fixing the software ISP proxy worker abort that left PipeWire camera nodes

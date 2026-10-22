@@ -1,1 +1,6 @@
+# The libcamera software ISP allocates its frame buffers from a DMA heap.
+# Keep heap access for the video group, and give the user of the active seat
+# access through the uaccess tag, as systemd does for /dev/udmabuf. The tag
+# must be set before 73-seat-late.rules, which turns it into an ACL.
 SUBSYSTEM=="dma_heap", GROUP="video", MODE="0660"
+SUBSYSTEM=="dma_heap", KERNEL=="system", TAG+="uaccess"
