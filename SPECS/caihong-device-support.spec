@@ -1,9 +1,9 @@
-%global rootfs_commit de106319349c0a8575f5b4047c942fb025c29197
+%global rootfs_commit d034c7869ea6046de97d7779156cc9f0ec35d087
 %global rootfs_name caihong-linux-rootfs-%{rootfs_commit}
 
 Name:           caihong-device-support
 Version:        0.1.0
-Release:        101.caihong%{?dist}
+Release:        105.caihong%{?dist}
 Summary:        OnePlus Pad Pro Caihong device services and udev rules
 License:        GPL-2.0-or-later
 URL:            https://github.com/FairyBand/caihong-linux-rootfs
@@ -25,14 +25,15 @@ Requires:       NetworkManager
 Requires:       caihong-qbootctl
 Requires:       systemd
 Requires:       util-linux
+Requires:       python3-gobject
 Requires:       v4l-utils
 BuildRequires:  gcc
 BuildRequires:  openssl-devel
 
 %description
 Device-specific userspace integration for the OnePlus Pad Pro Caihong Fedora
-image: Pogo input rules, hardware MAC setup, Bluetooth startup, hotspot,
-flashlight, pen pairing/charging, root filesystem growth and boot-slot tools.
+image: Pogo input rules, hardware MAC setup, Bluetooth startup, Bluetooth
+keyboard compatibility, hotspot, flashlight, pen pairing/charging, root filesystem growth and boot-slot tools.
 SELinux policy is deliberately not included yet; the first Fedora image is
 expected to collect AVC records in permissive mode.
 
@@ -47,8 +48,8 @@ install -Dpm 0755 caihong-nvram-mac %{buildroot}%{_prefix}/local/libexec/caihong
 
 for tool in \
     caihong-bluetooth-autostart caihong-flashlight caihong-hardware-mac \
-    caihong-hotspot caihong-mark-boot-successful caihong-pen-autoconnect \
-    caihong-pen-charge caihong-pen-pair caihong-slot; do
+    caihong-hotspot caihong-keyboard caihong-mark-boot-successful \
+    caihong-pen-autoconnect caihong-pen-charge caihong-pen-pair caihong-slot; do
     install -Dpm 0755 rootfs/caihong/usr/local/sbin/$tool \
         %{buildroot}%{_prefix}/local/sbin/$tool
 done
@@ -56,11 +57,19 @@ done
 for unit in \
     caihong-bluetooth-autostart.service caihong-grow-rootfs.service \
     caihong-hardware-mac.service caihong-hotspot.service \
-    caihong-mark-boot-successful.service caihong-pen-autoconnect.service \
-    caihong-pen-autoconnect.timer caihong-pen-charge.service \
-    caihong-pen-charge.timer caihong-pen-pair.service caihong-pen-pair.timer; do
+    caihong-keyboard.service caihong-mark-boot-successful.service \
+    caihong-pen-autoconnect.service caihong-pen-autoconnect.timer \
+    caihong-pen-charge.service caihong-pen-charge.timer \
+    caihong-pen-pair.service caihong-pen-pair.timer; do
     install -Dpm 0644 rootfs/caihong/etc/systemd/system/$unit \
         %{buildroot}%{_unitdir}/$unit
+done
+
+install -Dpm 0644 rootfs/caihong/etc/dbus-1/system.d/org.caihong.Keyboard1.conf \
+    %{buildroot}%{_datadir}/dbus-1/system.d/org.caihong.Keyboard1.conf
+for slice in app background session; do
+    install -Dpm 0644 rootfs/caihong/etc/systemd/user/${slice}.slice.d/50-caihong-scheduling.conf \
+        %{buildroot}%{_userunitdir}/${slice}.slice.d/50-caihong-scheduling.conf
 done
 
 install -Dpm 0644 %{SOURCE3} \
@@ -90,14 +99,15 @@ install -Dpm 0644 rootfs/caihong/usr/share/applications/caihong-switch-to-androi
 
 %check
 for tool in caihong-bluetooth-autostart caihong-flashlight caihong-hardware-mac \
-    caihong-hotspot caihong-mark-boot-successful caihong-pen-autoconnect \
-    caihong-pen-charge caihong-pen-pair caihong-slot; do
+    caihong-hotspot caihong-keyboard caihong-mark-boot-successful \
+    caihong-pen-autoconnect caihong-pen-charge caihong-pen-pair caihong-slot; do
     test -x %{buildroot}%{_prefix}/local/sbin/$tool
 done
 desktop-file-validate %{buildroot}%{_datadir}/applications/caihong-switch-to-android.desktop
 
 %post
 %systemd_post caihong-bluetooth-autostart.service
+%systemd_post caihong-keyboard.service
 %systemd_post caihong-grow-rootfs.service
 %systemd_post caihong-hardware-mac.service
 %systemd_post caihong-hotspot.service
@@ -112,6 +122,7 @@ udevadm control --reload-rules >/dev/null 2>&1 || :
 
 %preun
 %systemd_preun caihong-bluetooth-autostart.service
+%systemd_preun caihong-keyboard.service
 %systemd_preun caihong-grow-rootfs.service
 %systemd_preun caihong-hardware-mac.service
 %systemd_preun caihong-hotspot.service
@@ -125,6 +136,7 @@ udevadm control --reload-rules >/dev/null 2>&1 || :
 
 %postun
 %systemd_postun_with_restart caihong-bluetooth-autostart.service
+%systemd_postun_with_restart caihong-keyboard.service
 %systemd_postun_with_restart caihong-hardware-mac.service
 %systemd_postun_with_restart caihong-hotspot.service
 udevadm control --reload-rules >/dev/null 2>&1 || :
@@ -134,6 +146,10 @@ udevadm control --reload-rules >/dev/null 2>&1 || :
 %{_prefix}/local/libexec/caihong-nvram-mac
 %{_prefix}/local/sbin/caihong-*
 %{_unitdir}/caihong-*
+%{_datadir}/dbus-1/system.d/org.caihong.Keyboard1.conf
+%{_userunitdir}/app.slice.d/50-caihong-scheduling.conf
+%{_userunitdir}/background.slice.d/50-caihong-scheduling.conf
+%{_userunitdir}/session.slice.d/50-caihong-scheduling.conf
 %{_prefix}/lib/systemd/system-preset/90-caihong-device-support.preset
 %{_udevrulesdir}/80-caihong-hotspot.rules
 %{_udevrulesdir}/99-caihong-dma-heap.rules
@@ -148,6 +164,15 @@ udevadm control --reload-rules >/dev/null 2>&1 || :
 %{_datadir}/applications/caihong-switch-to-android.desktop
 
 %changelog
+* Sun Nov 01 2026 fairyband <zl3004431@gmail.com> - 0.1.0-105.caihong
+- Track rootfs fedora at d034c7869ea6, which contains the keyboard service,
+  pen-module path and user-slice scheduling weights.
+* Sun Nov 01 2026 fairyband <zl3004431@gmail.com> - 0.1.0-104.caihong
+- Load the pen power module from the active module tree and inherit the
+  upstream Bluetooth keyboard compatibility service and interactive scheduling
+  weights.
+* Thu Oct 22 2026 fairyband <zl3004431@gmail.com> - 0.1.0-103.caihong
+- Track rootfs fedora at 9d2cec55bc66.
 * Sun Oct 18 2026 fairyband <zl3004431@gmail.com> - 0.1.0-101.caihong
 - Build from the FairyBand fork, fedora branch (rootfs/caihong).
 - Give the Caihong Copr repository priority 10 so its packages always win over

@@ -1,9 +1,9 @@
-%global rootfs_commit de106319349c0a8575f5b4047c942fb025c29197
+%global rootfs_commit d034c7869ea6046de97d7779156cc9f0ec35d087
 %global rootfs_name caihong-linux-rootfs-%{rootfs_commit}
 
 Name:           caihong-firmware
 Version:        0.1.0
-Release:        102.caihong%{?dist}
+Release:        104.caihong%{?dist}
 Summary:        OnePlus Pad Pro Caihong firmware payloads
 License:        Redistributable, no modification permitted
 URL:            https://github.com/FairyBand/caihong-linux-rootfs
@@ -44,6 +44,10 @@ test -s %{buildroot}%{_prefix}/lib/firmware/updates/ath12k/WCN7850/hw2.0/caihong
 %{_prefix}/lib/firmware/updates/qcom/
 
 %changelog
+* Sun Nov 01 2026 fairyband <zl3004431@gmail.com> - 0.1.0-104.caihong
+- Track rootfs fedora at d034c7869ea6.
+* Thu Oct 22 2026 fairyband <zl3004431@gmail.com> - 0.1.0-103.caihong
+- Track rootfs fedora at 9d2cec55bc66.
 * Sun Oct 18 2026 fairyband <zl3004431@gmail.com> - 0.1.0-102.caihong
 - Build from the FairyBand fork, fedora branch, which now carries vpu33_4v.mbn.
 

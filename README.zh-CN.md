@@ -15,11 +15,11 @@ commit。rootfs 仓库的设备数据更新后，需要把这四个 spec 的 `ro
 
 | 包 | 内容 | SELinux policy |
 | --- | --- | --- |
-| `libcamera` | Caihong simple pipeline、simple IPA、GPU soft ISP、qcam、GStreamer、传感器 YAML | 未包含 |
+| `libcamera` | Caihong simple pipeline 驱动硬件 Camera ICP/BPS；不编译 simple IPA、GPU soft ISP 或传感器 YAML。qcam 仍是子包，镜像不安装它 | 未包含 |
 | `ffmpeg`（`ffmpeg-free` 等子包） | Fedora f44 `ffmpeg-free` 重建：修复 Iris V4L2 M2M 编码崩溃、补齐编码器 extradata，并开启 h264/hevc V4L2 M2M 硬件解码器 | 不适用 |
 | `obs-studio-plugin-v4l2m2m` | OBS 编码器插件：在高级输出模式中提供 V4L2 M2M H.264/HEVC 硬件编码（Iris），依赖 Caihong `ffmpeg` | 未包含 |
 | `caihong-ssc` | FastRPC listener、SSC SensorProxy、SSC DSP 配置 | 未包含 |
-| `caihong-device-support` | Pogo/触控板 udev、DMA heap、MAC、蓝牙、热点、手写笔、手电筒和启动服务 | 未包含 |
+| `caihong-device-support` | Pogo/触控板 udev、DMA heap、MAC、蓝牙、蓝牙键盘、热点、手写笔、手电筒、调度权重和启动服务 | 未包含 |
 | `caihong-firmware` | ADSP/CDSP、GPU、Iris 视频编解码（OEM 签名 `vpu33_4v.mbn`）、WLAN/BT、触控和音频相关固件 | 不适用 |
 | `caihong-audio` | UCM2 和 AudioReach topology | 不适用 |
 | `caihong-qbootctl` | Android A/B 槽检查与标记工具 | 未包含 |
@@ -50,20 +50,11 @@ rpmspec -P --target=aarch64 SPECS/ffmpeg-caihong.spec >/dev/null
 rpmspec -P --target=aarch64 SPECS/obs-studio-plugin-v4l2m2m.spec >/dev/null
 ```
 
-`caihong-kernel-payload` 需要先生成 release archive，目录必须包含：
-
-```text
-Image
-caihong.dtb
-boot-linux.img
-boot-userdata.img
-kernel-release
-LICENSE
-modules/<kernel-release>/
-```
-
-该 payload 不在普通 Copr 源码构建中生成；内核和 Android boot v2 镜像仍由内核
-发布流水线提供，然后以 source archive 交给 Copr。
+`caihong-kernel-payload` 的 `Source0` 是 rootfs 仓库 rolling release
+`kernel-payload` 上的 `caihong-kernel-payload-<version>.tar.zst`。`Version` 把
+`uname -r` 里 RPM 不允许的字符换成下划线；归档内的 `kernel-release` 和
+`modules/<kernel-release>/` 仍使用带连字符的 `uname -r`。归档是扁平的，没有顶层目录。
+`spectool` 生成 SRPM 时下载该归档。本地检查时也可以把同名归档放进临时 `SOURCES/`。
 
 ## Copr 顺序
 
@@ -116,9 +107,8 @@ make srpm SPEC=SPECS/libcamera-caihong.spec
 copr build --nowait <用户名>/fedora-44 .rpmbuild/SRPMS/*.src.rpm
 ```
 
-其余设备包可以并行上传。`caihong-kernel-payload`
-需要先把对应的 `caihong-kernel-payload-<version>.tar.zst` 放进 `SOURCES/`，再生成
-SRPM。直接上传 SRPM 的方式适合手动发布；本仓库也可作为 Copr SCM 的 Git 源。
+其余设备包可以并行上传。`caihong-kernel-payload` 不再把归档放进本仓库，而是由
+`spectool` 从 rootfs 的 `kernel-payload` release 下载。直接上传 SRPM 的方式适合手动发布；本仓库也可作为 Copr SCM 的 Git 源。
 Copr 只跟踪本仓库的提交，不会自动监视 spec 中固定的上游 commit。上游更新时需要
 人工更新 spec 中的 commit、提交并推送，随后由 SCM webhook 触发构建。若只想临时
 构建，也可以继续使用本地 SRPM 上传。

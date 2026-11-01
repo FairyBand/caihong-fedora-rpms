@@ -1,6 +1,6 @@
 Name:           caihong-kernel-updater
 Version:        0.1.0
-Release:        101.caihong%{?dist}
+Release:        102.caihong%{?dist}
 Summary:        Safe A/B slot updater for the Caihong kernel payload
 License:        GPL-2.0-only
 URL:            https://github.com/FairyBand/caihong-linux-rootfs
@@ -61,6 +61,9 @@ sh -n %{buildroot}%{_sbindir}/caihong-kernel-install
 %{_sbindir}/caihong-kernel-install
 
 %changelog
+* Sun Nov 01 2026 fairyband <zl3004431@gmail.com> - 0.1.0-102.caihong
+- Delete the copied pen power module after installing the payload. The pen
+  service loads caihong_pen_power from the active module tree.
 * Sun Oct 18 2026 fairyband <zl3004431@gmail.com> - 0.1.0-101.caihong
 - Point the URL at the FairyBand fork.
 

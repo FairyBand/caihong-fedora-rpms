@@ -1,9 +1,9 @@
-%global rootfs_commit de106319349c0a8575f5b4047c942fb025c29197
+%global rootfs_commit d034c7869ea6046de97d7779156cc9f0ec35d087
 %global rootfs_name caihong-linux-rootfs-%{rootfs_commit}
 
 Name:           caihong-audio
 Version:        0.1.0
-Release:        101.caihong%{?dist}
+Release:        104.caihong%{?dist}
 Summary:        Caihong Qualcomm AudioReach topology and UCM data
 License:        Redistributable, no modification permitted
 URL:            https://github.com/FairyBand/caihong-linux-rootfs
@@ -41,6 +41,10 @@ test -s %{buildroot}%{_datadir}/alsa/ucm2/Qualcomm/sm8650/Caihong/HiFi.conf
 %{_datadir}/alsa/ucm2/conf.d/sm8650/SM8650-MTP.conf
 
 %changelog
+* Sun Nov 01 2026 fairyband <zl3004431@gmail.com> - 0.1.0-104.caihong
+- Track rootfs fedora at d034c7869ea6.
+* Thu Oct 22 2026 fairyband <zl3004431@gmail.com> - 0.1.0-103.caihong
+- Track rootfs fedora at 9d2cec55bc66.
 * Sun Oct 18 2026 fairyband <zl3004431@gmail.com> - 0.1.0-101.caihong
 - Build from the FairyBand fork, fedora branch.
 

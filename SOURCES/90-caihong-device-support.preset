@@ -6,3 +6,4 @@ enable caihong-pen-autoconnect.timer
 enable caihong-pen-charge.timer
 enable caihong-pen-pair.timer
 disable caihong-hotspot.service
+enable caihong-keyboard.service
