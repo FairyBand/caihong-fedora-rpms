@@ -3,7 +3,7 @@
 
 Name:           caihong-firmware
 Version:        0.1.0
-Release:        104.caihong%{?dist}
+Release:        105.caihong%{?dist}
 Summary:        OnePlus Pad Pro Caihong firmware payloads
 License:        Redistributable, no modification permitted
 URL:            https://github.com/FairyBand/caihong-linux-rootfs
@@ -32,7 +32,7 @@ rm -f %{buildroot}%{_prefix}/lib/firmware/updates/regulatory.db \
 
 %check
 test -s %{buildroot}%{_prefix}/lib/firmware/updates/qcom/sm8650/Oneplus/caihong/adsp.mbn
-echo 'f790c5fa532145006bdffd47af7ae66171c6929dcafcdf679002d72214529233  %{buildroot}%{_prefix}/lib/firmware/updates/qcom/sm8650/Oneplus/caihong/vpu33_4v.mbn' | sha256sum -c -
+echo '36fbfbc2a49bedbd5d6a2f8517625a801aa01c8498a60647f705796914523cc1  %{buildroot}%{_prefix}/lib/firmware/updates/qcom/sm8650/Oneplus/caihong/vpu33_4v.mbn' | sha256sum -c -
 test -s %{buildroot}%{_prefix}/lib/firmware/updates/ath12k/WCN7850/hw2.0/caihong/amss.bin
 
 %files
@@ -44,6 +44,10 @@ test -s %{buildroot}%{_prefix}/lib/firmware/updates/ath12k/WCN7850/hw2.0/caihong
 %{_prefix}/lib/firmware/updates/qcom/
 
 %changelog
+* Sun Nov 01 2026 fairyband <zl3004431@gmail.com> - 0.1.0-105.caihong
+- Pin vpu33_4v.mbn to the hash in rootfs SHA256SUMS at d034c7869ea6.
+  The previous pin matched the pre-merge Fedora blob, not the file this
+  snapshot ships.
 * Sun Nov 01 2026 fairyband <zl3004431@gmail.com> - 0.1.0-104.caihong
 - Track rootfs fedora at d034c7869ea6.
 * Thu Oct 22 2026 fairyband <zl3004431@gmail.com> - 0.1.0-103.caihong
